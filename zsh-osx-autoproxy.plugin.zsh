@@ -1,6 +1,7 @@
 #!/bin/zsh
 # Auto configure zsh proxy env based on system preferences
 # Sukka (https://skk.moe)
+# Joey Zhang <thinkdoggie@gmail.com>
 
 # Cache the output of scutil --proxy
 __ZSH_OSX_AUTOPROXY_SCUTIL_PROXY=$(scutil --proxy)
@@ -34,4 +35,23 @@ if (( $__ZSH_OSX_AUTOPROXY_HTTPS_PROXY_ENABLED )); then
     __ZSH_OSX_AUTOPROXY_HTTPS_PROXY_PORT=${${__ZSH_OSX_AUTOPROXY_SCUTIL_PROXY#*HTTPSPort : }[(f)1]}
     export http_proxy="https://${__ZSH_OSX_AUTOPROXY_HTTPS_PROXY_SERVER}:${__ZSH_OSX_AUTOPROXY_HTTPS_PROXY_PORT}"
     export https_proxy="https://${__ZSH_OSX_AUTOPROXY_HTTPS_PROXY_SERVER}:${__ZSH_OSX_AUTOPROXY_HTTPS_PROXY_PORT}"
+fi
+
+# Extract and set no_proxy from ExceptionsList
+__ZSH_OSX_AUTOPROXY_EXCEPTIONS_LIST=$(echo "$__ZSH_OSX_AUTOPROXY_SCUTIL_PROXY" | awk '
+/ExceptionsList : <array> \{/,/\}/ {
+    if ($0 ~ /[0-9]+ : /) {
+        gsub(/^[ \t]*[0-9]+ : /, "")
+        if (exceptions == "") {
+            exceptions = $0
+        } else {
+            exceptions = exceptions "," $0
+        }
+    }
+}
+END { print exceptions }
+')
+
+if [[ -n "$__ZSH_OSX_AUTOPROXY_EXCEPTIONS_LIST" ]]; then
+    export no_proxy="$__ZSH_OSX_AUTOPROXY_EXCEPTIONS_LIST"
 fi
